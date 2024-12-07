@@ -34,6 +34,7 @@
 #include "intset.h"
 #include "zmalloc.h"
 #include "endianconv.h"
+#include "redisassert.h"
 
 /* Note that these encodings are ordered, so:
  * INTSET_ENC_INT16 < INTSET_ENC_INT32 < INTSET_ENC_INT64. */
@@ -103,7 +104,8 @@ intset *intsetNew(void) {
 
 /* Resize the intset */
 static intset *intsetResize(intset *is, uint32_t len) {
-    uint32_t size = len*intrev32ifbe(is->encoding);
+    uint64_t size = (uint64_t)len*intrev32ifbe(is->encoding);
+    assert(size <= SIZE_MAX - sizeof(intset));
     is = zrealloc(is,sizeof(intset)+size);
     return is;
 }
@@ -278,7 +280,7 @@ uint32_t intsetLen(const intset *is) {
 
 /* Return intset blob size in bytes. */
 size_t intsetBlobLen(intset *is) {
-    return sizeof(intset)+intrev32ifbe(is->length)*intrev32ifbe(is->encoding);
+    return sizeof(intset)+(size_t)intrev32ifbe(is->length)*intrev32ifbe(is->encoding);
 }
 
 #ifdef REDIS_TEST
